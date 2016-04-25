@@ -1,1 +1,2 @@
-# HCM_Set2_ManageReferenceDataSets
+# HCM_Selenium
+Repository for the application to invoke selenium.
