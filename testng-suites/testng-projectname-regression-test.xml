@@ -12,7 +12,7 @@
     	<parameter name="TestNo" value="Test Case"> 
  			<parameter name="ExcelFilePath" value="//var//jenkins_home//jobs//Oracle//jobs//HCM//jobs//HCM_Features_Manager//jobs//Set_2//jobs//Retrieve_Configuration//workspace//Set2.xlsx"></parameter> 
      		<parameter name="ExcelSheetName" value="Manage Reference Data Sets"></parameter> 
-      		<class name="hcm.tests.case2.ManageLegalAddressesTest"/>       
+      		<class name="hcm.tests.case2.ManageReferenceDataSetTest"/>       
       	</parameter> 
      </classes> 
    	</test> 
