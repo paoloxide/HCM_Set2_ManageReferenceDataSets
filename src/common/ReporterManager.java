@@ -26,4 +26,20 @@ public class ReporterManager {
 		return errMsg;
 		
 	}
+	public static String formatErrorMessage(String format, String errMsg){
+		switch(format){
+			case "logger":
+				errMsg = errMsg.replaceAll("\\n", " ")
+				.replaceAll("null", "")
+				.replaceAll("\\t", "")
+				.replaceAll("  ", "")
+				.replaceAll("    ", "");
+				break;
+		
+			default:
+				return errMsg;
+		}
+		
+		return errMsg;
+	}
 }

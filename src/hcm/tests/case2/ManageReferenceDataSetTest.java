@@ -3,10 +3,13 @@ package hcm.tests.case2;
 import static util.ReportLogger.log;
 import static util.ReportLogger.logFailure;
 
+import java.util.List;
+
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.openqa.selenium.By;
 import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebElement;
 import org.testng.annotations.Test;
 
 import common.BaseTest;
@@ -126,6 +129,8 @@ private static final int MAX_TIME_OUT = 30;
 	}
 
 	private boolean manageRefDataSets(TaskListManagerTopPage task) throws Exception{
+		int afrrkInt = 0;
+		boolean hasSkipped = false;
 		
 		searchProjectName(task);
 		locateManageRefDataSetsPage(task);
@@ -133,13 +138,19 @@ private static final int MAX_TIME_OUT = 30;
 		sumMsg += "\n====================== R E P O R T   S U M M A R Y =====================\n";
 		while(getExcelData(inputs, defaultcolNum, "text").length()>0){
 			try{
-					createDataSets(task);
+					if(!hasSkipped){
+						addNewRow(afrrkInt);
+					}
+					createDataSets(task, afrrkInt);
+					hasSkipped = false;
+					afrrkInt += 1;
 					sumMsg += "[SUCCESS] Data Set: "+dataSetName+" has been created successfully.\n";
 				} catch(DuplicateEntryException de){
 					takeScreenshot();
-					TaskUtilities.jsFindThenClick("//button[text()='ancel']");
+					hasSkipped = true;
+					//TaskUtilities.jsFindThenClick("//button[text()='ancel']");
 					//Nested try bad..
-					try{
+					/*try{
 								TaskUtilities.customWaitForElementVisibility("//h1[contains(text(),'"+searchData+"')]", MAX_TIME_OUT);
 								TaskUtilities.jsFindThenClick("//div[text()='Manage Reference Data Sets']/../..//a[@title='Go to Task']");
 								TaskUtilities.customWaitForElementVisibility("//h1[text()='Manage Reference Data Sets']", MAX_TIME_OUT);
@@ -148,8 +159,12 @@ private static final int MAX_TIME_OUT = 30;
 								
 								searchProjectName(task);
 								locateManageRefDataSetsPage(task);
-							}
+							}*/
 					//Nested try bad..
+					if(getExcelData(inputs+1, defaultcolNum, "text").isEmpty()){
+						TaskUtilities.jsFindThenClick("//button[text()='ancel']");
+						TaskUtilities.customWaitForElementVisibility("//h1[contains(text(),'"+searchData+"')]", MAX_TIME_OUT);
+					}
 					errMsg += ReporterManager.trimErrorMessage(de+errMsg);
 					errMsg = errMsg+"\n";
 					sumMsg += "[FAILED] Unable to create Data Set: "+dataSetName+"...\n"+errMsg;
@@ -226,12 +241,14 @@ private static final int MAX_TIME_OUT = 30;
 		TaskUtilities.customWaitForElementVisibility("//h1[text()='Manage Reference Data Sets']", MAX_TIME_OUT);
 	}
 
-	private void createDataSets(TaskListManagerTopPage task) throws Exception{
-		
+	private void addNewRow(int afrrkInt) throws Exception{
 		TaskUtilities.jsFindThenClick("//img[@title='New']/..");
-		TaskUtilities.customWaitForElementVisibility("//tr[@_afrrk=0]", MAX_TIME_OUT);
-		String pseudoRoot;
+		TaskUtilities.customWaitForElementVisibility("//tr[@_afrrk="+afrrkInt+"]", MAX_TIME_OUT);
+	}
+	private void createDataSets(TaskListManagerTopPage task, int afrrkInt) throws Exception{
+		String spanReference = "";
 		
+		String pseudoRoot;
 		while(getExcelData(label, colNum, "text").length()>0){
 			 pseudoRoot = "//tr[@_afrrk="+afrrkInt+"]";
 			
@@ -243,6 +260,10 @@ private static final int MAX_TIME_OUT = 30;
 			String type = TaskUtilities.getdataLocatorType(labelLocator);
 			dataLocator = getExcelData(inputs, colNum, type);
 			
+			if(labelLocator.contentEquals("Set Code")){
+				spanReference = dataLocator;
+			}
+			
 			TaskUtilities.retryingInputEncoder(task, labelLocatorPath, dataLocator);
 			
 			colNum += 1;
@@ -250,8 +271,9 @@ private static final int MAX_TIME_OUT = 30;
 		
 		dataSetName = getExcelData(inputs, defaultcolNum, "text");
 		
-		TaskUtilities.jsFindThenClick("//button[text()='ave and Close']");
-		TaskUtilities.customWaitForElementVisibility("//h1[contains(text(),'"+searchData+"')]", MAX_TIME_OUT, new CustomRunnable() {
+		//TaskUtilities.jsFindThenClick("//button[text()='ave and Close']");
+		TaskUtilities.jsFindThenClick("//button[text()='Save']");
+		TaskUtilities.customWaitForElementVisibility("//span[text()='"+spanReference+"']", 15, new CustomRunnable() {
 			
 			@Override
 			public void customRun() throws Exception {
@@ -259,17 +281,43 @@ private static final int MAX_TIME_OUT = 30;
 				TaskUtilities.jsCheckMissedInput();
 				TaskUtilities.jsCheckMessageContainer();
 			}
-		});		
+		});
+		/*TaskUtilities.customWaitForElementVisibility("//h1[contains(text(),'"+searchData+"')]", MAX_TIME_OUT, new CustomRunnable() {
+			
+			@Override
+			public void customRun() throws Exception {
+				// TODO Auto-generated method stub
+				TaskUtilities.jsCheckMissedInput();
+				TaskUtilities.jsCheckMessageContainer();
+			}
+		});
 		
 		TaskUtilities.customWaitForElementVisibility("//h1[contains(text(),'"+searchData+"')]", MAX_TIME_OUT);
-		//TaskUtilities.jsFindThenClick("//button[text()='D']");
-		//TaskUtilities.customWaitForElementVisibility("//h1[text()='Manage Implementation Projects']", MAX_TIME_OUT);
-		//TaskUtilities.jsFindThenClick("//button[text()='D']");
-		//TaskUtilities.customWaitForElementVisibility("//h1[text()='Overview']", MAX_TIME_OUT);
-		//searchProjectName(task);
-		//locateManageRefDataSetsPage(task);
-		
 		TaskUtilities.jsFindThenClick("//div[text()='Manage Reference Data Sets']/../..//a[@title='Go to Task']");
-		TaskUtilities.customWaitForElementVisibility("//h1[text()='Manage Reference Data Sets']", MAX_TIME_OUT);
+		TaskUtilities.customWaitForElementVisibility("//h1[text()='Manage Reference Data Sets']", MAX_TIME_OUT);*/
+		
+	}
+	
+	private int  surveyCurrentTableInputs(String currentStep) throws Exception{
+		int afrrkInt = -1;
+		
+		List<WebElement> queryFolder = driver.findElements(By.xpath("//div[contains(@id,'dynamicRegion')]//tr"));
+		System.out.println("folder size is "+queryFolder.size());
+		for(WebElement inputEntry : queryFolder){
+			
+			String afrrk = inputEntry.getAttribute("_afrrk");
+			System.out.println("afrrk is "+afrrk);
+			
+			if(afrrk != null && !afrrk.isEmpty() && !afrrk.contentEquals("")){
+				if(Integer.parseInt(afrrk) > afrrkInt){
+					afrrkInt =  Integer.parseInt(afrrk);
+				}else{
+					//Skips...
+				}
+			}
+		}
+		
+		System.out.print("afrrkInt is now: "+afrrkInt);
+		return afrrkInt;
 	}
 }

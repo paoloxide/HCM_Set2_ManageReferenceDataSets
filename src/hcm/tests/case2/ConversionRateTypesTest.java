@@ -29,7 +29,7 @@ public class ConversionRateTypesTest extends BaseTest{
 	private static final int defaultinputs = 11;
 	
 	private String projectName = "Default";
-	private String sumMsg = "", errMsg= "";
+	private String sumMsg = "", errMsg= "", loggerMsg ="";
 	private int projectRowNum = TestCaseRow;
 	
 	private String searchData, labelLocator, labelLocatorPath, dataLocator, rateTypeName;
@@ -95,6 +95,7 @@ public class ConversionRateTypesTest extends BaseTest{
 		}
 		
 		System.out.println(sumMsg);
+		System.out.println(loggerMsg);
 		log("Conversion Rate Types has been finised.");
 		System.out.println("Conversion Rate Types has been finised.");
 		
@@ -133,6 +134,7 @@ public class ConversionRateTypesTest extends BaseTest{
 		getLastCurrencyRateType();
 		addNewRow();
 		sumMsg += "\n====================== R E P O R T   S U M M A R Y =====================\n";
+		loggerMsg += "\nERROR FOUND: ";
 		while(getExcelData(inputs, defaultcolNum, "text").length()>0){
 			try{ 
 					createCurrencyRateType(task);
@@ -143,9 +145,10 @@ public class ConversionRateTypesTest extends BaseTest{
 				} catch(DuplicateEntryException de){
 					Thread.sleep(750);
 					TaskUtilities.jsFindThenClick("//button[text()='OK']");
+					manageLoggerMsg(de);
 					errMsg += ReporterManager.trimErrorMessage(de+errMsg);
 					errMsg = errMsg+"\n";
-					sumMsg += "[FAILED] Unable to create Rate Type: "+rateTypeName+"...\n";
+					sumMsg += "[FAILED] Unable to create Rate Type: "+rateTypeName+"...\n"+errMsg;
 				}
 			
 			colNum = defaultcolNum;
@@ -226,7 +229,13 @@ public class ConversionRateTypesTest extends BaseTest{
 		System.out.println("lastinput has been set to: "+lastInput);
 		
 	}
-
+	private void manageLoggerMsg(Exception ex){
+		String tmploggerMsg = "[FAILED] Unable to create Rate Type: "+rateTypeName+"..."
+				+ReporterManager.formatErrorMessage("logger", ex+errMsg)+"; ";
+		if(tmploggerMsg.contains("invalid") || tmploggerMsg.contains("Invalid")){
+			loggerMsg += tmploggerMsg;
+		}
+	}
 	private void addNewRow() throws Exception{
 
 		TaskUtilities.scrollDownToElement(false, "");

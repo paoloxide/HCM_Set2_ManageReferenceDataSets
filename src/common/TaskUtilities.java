@@ -24,6 +24,9 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import bsh.StringUtil;
 import common.DuplicateEntryException;
+import hcm.exception.InvalidLegalAddressException;
+import hcm.exception.InvalidLocationException;
+import hcm.exception.InvalidOptionFoundException;
 import common.BaseTest;
 import static util.ReportLogger.log;
 
@@ -339,18 +342,35 @@ public class TaskUtilities{
 	 * 
 	 * @author jerrick.m.falogme
 	 */
-	public static void consolidatedInputSelector(String labelLocatorPath, String dataLocator) throws Exception{
+	public static void consolidatedInputSelector(final String labelLocatorPath, final String dataLocator) throws Exception{
 		
-		jsScrollIntoView(labelLocatorPath);
-		//String dataLocatorPath = labelLocatorPath+"/option[text()='"+dataLocator+"']";
-		String dataLocatorPath = labelLocatorPath+"/option[@title='"+dataLocator+"']";
-		retryingFindClick(By.xpath(labelLocatorPath));
-		if(!dataLocator.isEmpty() && !dataLocator.contentEquals("")){
-				customWaitForElementVisibility(dataLocatorPath, 30);
-				retryingFindClick(By.xpath(dataLocatorPath));
-			} else{
-				//Skips the sequence...
-			}
+		try{
+			retryingWrapper(new CustomRunnable() {
+				
+				@Override
+				public void customRun() throws Exception {
+					// TODO Auto-generated method stub
+					
+					jsScrollIntoView(labelLocatorPath);
+					//String dataLocatorPath = labelLocatorPath+"/option[text()='"+dataLocator+"']";
+					String dataLocatorPath = labelLocatorPath+"/option[@title='"+dataLocator+"']";
+					retryingFindClick(By.xpath(labelLocatorPath));
+					if(!dataLocator.isEmpty() && !dataLocator.contentEquals("")){
+							customWaitForElementVisibility(dataLocatorPath, 30);
+							retryingFindClick(By.xpath(dataLocatorPath));
+						} else{
+							//Skips the sequence...
+						}
+					driver.findElement(By.xpath(labelLocatorPath)).sendKeys(Keys.TAB);
+				}
+			});
+		} catch(StaleElementReferenceException sre){
+			if(!labelLocatorPath.isEmpty()){
+					throw new InvalidOptionFoundException("option "+dataLocator+" is not valid...");
+				} else{
+					throw new StaleElementReferenceException("Label Path is null...");
+				}
+		}
 	}
 
 	public static void consolidatedInputSearcherAndSelector(BasePage task, String labelLocator, String dataLocator, String parentLinkPath, StringCustomRunnable searchLabels, CustomRunnable okButtons) throws Exception{
@@ -369,6 +389,13 @@ public class TaskUtilities{
 		jsScrollIntoView("//a[contains(@title,'"+labelLocator+"')]"+parentLinkPath);
 		jsFindThenClick("//a[contains(@title,'"+labelLocator+"')]"+parentLinkPath);
 		
+		
+		//Select label sets...
+		SSlabelLocator = searchLabels.customRun();
+		String rootPath = SSlabelLocator.substring(SSlabelLocator.indexOf(";")+1);
+		SSlabelLocator = SSlabelLocator.substring(0, SSlabelLocator.indexOf(";"));
+		System.out.println("SSLabelLocator is now: "+SSlabelLocator);
+		
 		retryingWrapper(new CustomRunnable() {
 			
 			@Override
@@ -378,12 +405,6 @@ public class TaskUtilities{
 				jsFindThenClick("//a[text()='Search...']");
 			}
 		});
-		
-		//Select label sets...
-		SSlabelLocator = searchLabels.customRun();
-		String rootPath = SSlabelLocator.substring(SSlabelLocator.indexOf(";")+1);
-		SSlabelLocator = SSlabelLocator.substring(0, SSlabelLocator.indexOf(";"));
-		System.out.println("SSLabelLocator is now: "+SSlabelLocator);
 		
 		//SSlabelLocatorPath = retryingSearchInput(SSlabelLocator);
 		SSlabelLocatorPath = retryingSearchfromDupInput(SSlabelLocator, rootPath);
@@ -585,6 +606,7 @@ public class TaskUtilities{
         while(labelAttempts < labelStructArray.length){
 	        try{
 		        	customWaitForElementVisibility(labelStructArray[labelAttempts], 10);
+		        	jsScrollIntoView(labelStructArray[labelAttempts]);
 		        	break labelloop;
 		        } catch(TimeoutException e){
 		        	if(labelAttempts >= labelStructArray.length){
@@ -600,6 +622,7 @@ public class TaskUtilities{
         while(attempts < inputTypesArray.length) {
             try {
             		String compoundPath = labelStructArray[labelAttempts]+inputTypesArray[attempts];
+            		jsScrollIntoView(compoundPath);
 	                driver.findElement(By.xpath(compoundPath)).click();
 	                System.out.println("Valid Input path has been found"+" after "+attempts+" tries...");
 	                System.out.println("Assigned path: \n"+compoundPath);
@@ -815,7 +838,14 @@ public class TaskUtilities{
 		if((container.isEmpty() || container.contentEquals("")) && tempMsg.contains("Error")){
 			errMsg = driver.findElement(By.id("d1::msgDlg")).getText().replaceAll("OK", "").replace("Error", "");
 			log(errMsg);
-			throw new DuplicateEntryException("Error FOUND: \n"+errMsg);
+			
+			if(tempMsg.contains("Legal Address")){
+						throw new InvalidLegalAddressException(errMsg);
+					} else if(tempMsg.contains("Location")){
+						throw new InvalidLocationException(errMsg);
+					} else{
+						throw new DuplicateEntryException("Error FOUND: \n"+errMsg);
+					}
 		}
 		
 	}
@@ -928,7 +958,8 @@ public class TaskUtilities{
 			
 			scrollLeftAgain = (boolean)js.executeScript(
 				"scrollMove = document.getElementById(\""+sID+"\").scrollLeft;"+
-				"oldScrollValue = scrollMove;"+
+				"var oldScrollValue = scrollMove;"+
+				"var newScrollValue = 0;"+
 				"if(scrollMove != null || scrollMove != undefined){"+
 				"	if("+isScrollingLeft+"){"+
 				"		scrollMove += "+scrollValue+";"+
@@ -943,6 +974,20 @@ public class TaskUtilities{
 		}
 		
 		return scrollLeftAgain;
+	}
+	
+	public static String jsGetInputValue(String elemPath){
+		String value ="";
+		JavascriptExecutor js = (JavascriptExecutor)driver;
+		value = (String)js.executeScript(
+				"function getElementByXPath(xPath){"+
+				"	return document.evaluate(xPath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;"+
+				"}"+
+				"var inputContainer = getElementByXPath(\""+elemPath+"\");"+
+				"var inputValue = inputContainer.value;"+
+				"return inputValue;"
+				);
+		return value;
 	}
 	
 	//Input Box Utilities...
